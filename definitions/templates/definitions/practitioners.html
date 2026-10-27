@@ -1,0 +1,7 @@
+<!doctype html>
+<html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>پرسنل و انجام‌دهندگان</title>
+<style>body{font-family:Tahoma;background:#f4f7fb;color:#18323a;padding:35px}.wrap{max-width:1000px;margin:auto}.card{background:#fff;border:1px solid #dfe9ed;border-radius:16px;padding:22px;margin:18px 0}.grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}label{font-size:13px}input,select{width:100%;padding:9px;border:1px solid #cfdde2;border-radius:8px}button{background:#16816f;color:#fff;border:0;border-radius:8px;padding:10px 22px;font-family:inherit}table{width:100%;border-collapse:collapse}th,td{padding:11px;border-bottom:1px solid #e7eef0;text-align:right;font-size:13px}th{color:#58727a}</style></head>
+<body><main class="wrap"><p><a href="/definitions/">← تعریف پایه</a></p><h1>پزشکان، پرستاران و انجام‌دهندگان</h1><p>ابتدا گروه شغلی را در «تعریف پایه» ثبت کنید؛ سپس درصد سهم هر شخص از عملکرد را وارد کنید.</p>
+<section class="grid"><div class="card"><h2>ثبت شخص جدید</h2><form method="post">{% csrf_token %}{{ form.as_p }}<button>ثبت پرسنل</button></form></div>
+<div class="card"><h2>فهرست پرسنل</h2><table><tr><th>نام</th><th>گروه</th><th>تخصص / سمت</th><th>سهم از عملکرد</th></tr>{% for x in practitioners %}<tr><td>{{ x.name }}</td><td>{{ x.group|default:'—' }}</td><td>{{ x.role|default:'—' }}</td><td>{{ x.share_percent }}٪</td></tr>{% empty %}<tr><td colspan="4">هنوز موردی ثبت نشده است.</td></tr>{% endfor %}</table></div></section>
+</main></body></html>

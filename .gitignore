@@ -1,0 +1,29 @@
+﻿# Python
+.venv/
+__pycache__/
+*.py[cod]
+
+# Local application data and backups
+db.sqlite3
+*.sqlite3-journal
+backups/
+backup-settings.json
+
+# Generated files
+build/
+dist/
+output/
+tmp/
+work-temp/
+
+# Local or test data — do not publish
+build-test-data/
+installer-test-data/
+
+# Secrets / local environment
+.env
+.env.*
+tools/license_registry.csv
+tools/license-registry.csv
+installer/work/
+*.log

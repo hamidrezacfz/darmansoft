@@ -1,0 +1,51 @@
+{% load jalali %}
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>زیبایی و سلامت | درمان‌سافت</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#fff7fa;color:#372535;font-family:Tahoma,sans-serif}.wrap{max-width:1200px;margin:auto;padding:28px 24px}.top{display:flex;justify-content:space-between;gap:16px;align-items:start;margin-bottom:24px}.back{color:#9c3564;text-decoration:none;font-size:13px}.top h1{margin:8px 0 5px;font-size:27px}.sub{margin:0;color:#8a6a7d;font-size:13px}.badge{background:#fde4ee;color:#9a275b;padding:9px 13px;border-radius:999px;font-size:12px}.ref{background:#fde7f0;color:#8a2152;border:1px solid #edbfd2;border-radius:14px;text-align:center;padding:15px;margin:0 0 20px}.ref b{display:block;font-size:25px;margin:7px}.grid{display:grid;grid-template-columns:420px 1fr;gap:22px}.panel,.list{background:#fff;border:1px solid #f0dce6;border-radius:20px;padding:24px;box-shadow:0 10px 28px #7d244511}.panel h2{font-size:18px;margin:0 0 18px}.panel p{margin:0 0 13px}.panel label{display:block;font-size:12px;color:#79576a;margin-bottom:6px}.panel input,.panel select,.panel textarea,.search input{width:100%;font-family:inherit;padding:10px;border:1px solid #ead5df;border-radius:10px;background:#fffafe}.panel .helptext{font-size:11px;color:#8a6a7d}.panel button,.search button{width:100%;border:0;border-radius:10px;padding:12px;background:#a52a63;color:#fff;font-family:inherit;font-weight:bold;cursor:pointer}.auto{display:none;background:#fff0f6;color:#9c3564;padding:8px;border-radius:8px;font-size:12px}.calendar{position:absolute;z-index:9;width:310px;background:#fff;border:1px solid #edbfd2;border-radius:12px;padding:10px;box-shadow:0 12px 28px #7d244530;display:none}.calh{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:bold}.calh button{width:auto;padding:6px;background:#fde7f0;color:#9c3564}.days{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;text-align:center}.day{border:0;background:#fff;padding:8px 0;border-radius:7px;font-family:inherit;cursor:pointer}.day:hover{background:#fde7f0}.list{padding:0;overflow:hidden}.list-head{padding:21px 22px;border-bottom:1px solid #f3e4ea}.list h2{font-size:18px;margin:0}.list p{font-size:12px;color:#896b7b;margin:6px 0 0}.search{display:flex;gap:8px;margin-top:14px}.search button{width:auto;padding:9px 16px}table{width:100%;border-collapse:collapse}th{background:#fff8fb;color:#875d73;font-size:12px}td,th{padding:13px;text-align:right;border-bottom:1px solid #f6e9ee;font-size:13px}.tag{background:#fde6ef;color:#9c3564;border-radius:99px;padding:5px 9px;font-size:11px}.empty{padding:42px;text-align:center;color:#8a6a7d}@media(max-width:850px){.grid{grid-template-columns:1fr}.wrap{padding:18px 12px}.top{flex-direction:column}.badge{order:-1}}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header class="top">
+      <div>
+        <a class="back" href="/">← بازگشت به داشبورد</a>
+        <h1>پنل زیبایی و سلامت</h1>
+        <p class="sub">پذیرش مراجع، ثبت خدمات زیبایی و مراقبتی و مشاهده سابقه جلسات.</p>
+      </div>
+      <span class="badge">مناسب کلینیک زیبایی، پوست، مو و سلامت</span>
+    </header>
+    {% if referral_code %}<section class="ref">جلسه ثبت شد. کد ارجاع به صندوق:<b>{{ referral_code }}</b>این کد را برای تسویه به صندوق بدهید.</section>{% endif %}
+    <section class="grid">
+      <form class="panel" method="post">
+        {% csrf_token %}
+        <h2>پذیرش و ثبت خدمت</h2>
+        {{ form.national_id.label_tag }}{{ form.national_id }}{{ form.first_name.label_tag }}{{ form.first_name }}{{ form.last_name.label_tag }}{{ form.last_name }}{{ form.mobile.label_tag }}{{ form.mobile }}{{ form.visit_type.label_tag }}{{ form.visit_type }}{{ form.service.label_tag }}{{ form.service }}{{ form.practitioner.label_tag }}{{ form.practitioner }}{{ form.treatment_area.label_tag }}{{ form.treatment_area }}{{ form.notes.label_tag }}{{ form.notes }}<div style="position:relative">{{ form.next_session_date.label_tag }}{{ form.next_session_date }}<div id="calendar" class="calendar"></div></div>{{ form.next_session_time.label_tag }}{{ form.next_session_time }}
+        <p id="patient-found" class="auto">اطلاعات مراجع قبلی بازیابی شد.</p>
+        <button>ثبت خدمت و جلسه</button>
+      </form>
+
+    </section>
+  </main>
+  <script>
+    const national=document.getElementById('id_national_id');
+    async function lookup(){
+      if(national.value.length<10)return;
+      const response=await fetch('/reception/patient-lookup/?national_id='+encodeURIComponent(national.value));
+      const data=await response.json();
+      const message=document.getElementById('patient-found');
+      if(!data.found){message.style.display='none';return;}
+      document.getElementById('id_first_name').value=data.first_name;
+      document.getElementById('id_last_name').value=data.last_name;
+      document.getElementById('id_mobile').value=data.mobile;
+      message.style.display='block';
+    }
+    national.onchange=national.onblur=lookup;
+    const dateInput=document.getElementById('id_next_session_date'),cal=document.getElementById('calendar'),months=['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];let [year,month]='{{ today_jalali }}'.split('/').map(Number);function drawCalendar(){let n=month<7?31:month<12?30:29,first=(new Date(year+621,month-1,1).getDay()+1)%7,html='<div class="calh"><button type="button" id="nextm">ماه بعد</button><span>'+months[month-1]+' '+year+'</span><button type="button" id="prevm">ماه قبل</button></div><div class="days">';for(let i=0;i<first;i++)html+='<span></span>';for(let d=1;d<=n;d++)html+='<button class="day" type="button" data-d="'+d+'">'+d+'</button>';cal.innerHTML=html+'</div>';document.getElementById('nextm').onclick=()=>{month++;if(month>12){month=1;year++}drawCalendar()};document.getElementById('prevm').onclick=()=>{month--;if(month<1){month=12;year--}drawCalendar()};cal.querySelectorAll('.day').forEach(x=>x.onclick=()=>{dateInput.value=year+'/'+String(month).padStart(2,'0')+'/'+String(x.dataset.d).padStart(2,'0');cal.style.display='none'})}if(dateInput){dateInput.onclick=e=>{e.stopPropagation();cal.style.display='block';drawCalendar()};cal.onclick=e=>e.stopPropagation();document.addEventListener('click',()=>cal.style.display='none')}
+  </script>
+</body>
+</html>
