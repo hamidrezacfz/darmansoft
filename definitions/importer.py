@@ -74,6 +74,44 @@ def import_services(upload):
     return created, updated, errors
 
 
+def import_imaging_services(upload):
+    rows = read_rows(upload)
+    if not rows:
+        raise ValueError('فایل خالی است.')
+    headers = {str(value).strip().lower(): index for index, value in enumerate(rows[0])}
+    required = ('گروه خدمت', 'نام خدمت', 'تعرفه آزاد')
+    if not all(name in headers for name in required):
+        raise ValueError('ستون‌های لازم: گروه خدمت، کد استاندارد، نام خدمت، تعرفه آزاد')
+    allowed_groups = {'تصویربرداری', 'سی تی اسکن', 'سونوگرافی', 'MRI'}
+    created = updated = 0
+    errors = []
+    for number, row in enumerate(rows[1:], start=2):
+        if not any(str(value).strip() for value in row):
+            continue
+        try:
+            group = _value(row, headers, 'گروه خدمت', 'دسته', 'گروه')
+            if group not in allowed_groups:
+                raise ValueError('گروه خدمت باید یکی از تصویربرداری، سی تی اسکن، سونوگرافی یا MRI باشد.')
+            name = _value(row, headers, 'نام خدمت', 'نام')
+            code = _value(row, headers, 'کد داخلی', 'کد')
+            standard_code = _value(row, headers, 'کد استاندارد')
+            price = _amount(_value(row, headers, 'تعرفه آزاد', 'تعرفه'))
+            if not name:
+                raise ValueError('نام خدمت الزامی است.')
+            category, _ = ServiceCategory.objects.get_or_create(name=group)
+            defaults = {'category': category, 'standard_code': standard_code or None, 'name': name, 'base_price': price, 'active': True}
+            if code:
+                _, made = MedicalService.objects.update_or_create(code=code, defaults=defaults)
+                created += made
+                updated += not made
+            else:
+                MedicalService.objects.create(code=None, **defaults)
+                created += 1
+        except (ValueError, InvalidOperation, Exception) as exc:
+            errors.append(f'ردیف {number}: {exc}')
+    return created, updated, errors
+
+
 def import_tariffs(upload):
     rows = read_rows(upload)
     if not rows: raise ValueError('فایل خالی است.')

@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'accounting',
     'aesthetics',
     'dentistry',
+    'imaging',
     'licensing',
     'django.contrib.admin',
     'django.contrib.auth',

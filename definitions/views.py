@@ -5,7 +5,7 @@ from django.shortcuts import render
 from django.shortcuts import redirect
 from .models import ServiceCategory, MedicalService, InsuranceProvider, InsuranceTariff, Practitioner, PractitionerGroup
 from .forms import CategoryForm, ServiceForm, InsuranceForm, TariffForm, PractitionerForm, PractitionerGroupForm
-from .importer import import_services, import_tariffs
+from .importer import import_imaging_services, import_services, import_tariffs
 FORMS = {'category': CategoryForm, 'service': ServiceForm, 'insurance': InsuranceForm, 'tariff': TariffForm, 'practitioner_groups': PractitionerGroupForm}
 def practitioners(request):
     form = PractitionerForm(request.POST or None)
@@ -38,7 +38,12 @@ def import_file(request):
             messages.error(request, 'ابتدا فایل را انتخاب کنید.')
         else:
             try:
-                created, updated, errors = import_services(upload) if kind == 'services' else import_tariffs(upload)
+                if kind == 'imaging':
+                    created, updated, errors = import_imaging_services(upload)
+                elif kind == 'services':
+                    created, updated, errors = import_services(upload)
+                else:
+                    created, updated, errors = import_tariffs(upload)
                 messages.success(request, f'{created} مورد جدید ثبت و {updated} مورد به‌روزرسانی شد.')
                 for error in errors[:8]: messages.error(request, error)
             except ValueError as exc: messages.error(request, str(exc))
@@ -47,7 +52,12 @@ def import_file(request):
 
 
 def import_template(request, kind):
-    headers = ['دسته', 'کد داخلی', 'کد استاندارد', 'نام خدمت', 'تعرفه آزاد'] if kind == 'services' else ['کد خدمت', 'سازمان بیمه', 'نام بیمه', 'سهم بیمار', 'سهم بیمه', 'سهم بیمه تکمیلی']
+    if kind == 'imaging':
+        headers = ['گروه خدمت', 'کد داخلی', 'کد استاندارد', 'نام خدمت', 'تعرفه آزاد']
+    elif kind == 'services':
+        headers = ['دسته', 'کد داخلی', 'کد استاندارد', 'نام خدمت', 'تعرفه آزاد']
+    else:
+        headers = ['کد خدمت', 'سازمان بیمه', 'نام بیمه', 'سهم بیمار', 'سهم بیمه', 'سهم بیمه تکمیلی']
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="darman-soft-{kind}-template.csv"'
     response.write('\ufeff'); csv.writer(response).writerow(headers)

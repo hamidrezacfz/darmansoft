@@ -30,6 +30,7 @@ urlpatterns = [
     path('reception/', include('reception.urls')),
     path('beauty/', include('aesthetics.urls')),
     path('dentistry/', include('dentistry.urls')),
+    path('imaging/', include('imaging.urls')),
     path('records/', include('records.urls')),
     path('definitions/users/', include('accounts.urls')),
     path('admin/', admin.site.urls),
