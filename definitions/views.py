@@ -1,4 +1,6 @@
-import csv
+import io
+import zipfile
+from xml.sax.saxutils import escape
 from django.http import HttpResponse
 from django.contrib import messages
 from django.shortcuts import render
@@ -44,8 +46,11 @@ def import_file(request):
                     created, updated, errors = import_services(upload)
                 else:
                     created, updated, errors = import_tariffs(upload)
-                messages.success(request, f'{created} مورد جدید ثبت و {updated} مورد به‌روزرسانی شد.')
-                for error in errors[:8]: messages.error(request, error)
+                if errors:
+                    messages.error(request, 'به‌دلیل خطا در فایل، هیچ موردی ثبت یا به‌روزرسانی نشد.')
+                    for error in errors: messages.error(request, error)
+                else:
+                    messages.success(request, f'{created} مورد جدید ثبت و {updated} مورد به‌روزرسانی شد.')
             except ValueError as exc: messages.error(request, str(exc))
         return redirect('definition_import')
     return render(request, 'definitions/import.html')
@@ -58,9 +63,27 @@ def import_template(request, kind):
         headers = ['دسته', 'کد داخلی', 'کد استاندارد', 'نام خدمت', 'تعرفه آزاد']
     else:
         headers = ['کد خدمت', 'سازمان بیمه', 'نام بیمه', 'سهم بیمار', 'سهم بیمه', 'سهم بیمه تکمیلی']
-    response = HttpResponse(content_type='text/csv; charset=utf-8')
-    response['Content-Disposition'] = f'attachment; filename="darman-soft-{kind}-template.csv"'
-    response.write('\ufeff'); csv.writer(response).writerow(headers)
+    def column_name(index):
+        name = ''
+        while index:
+            index, remainder = divmod(index - 1, 26)
+            name = chr(65 + remainder) + name
+        return name
+    cells = ''.join(f'<c r="{column_name(index)}1" t="inlineStr"><is><t>{escape(header)}</t></is></c>' for index, header in enumerate(headers, 1))
+    sheet = f'<?xml version="1.0" encoding="UTF-8"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData><row r="1">{cells}</row></sheetData></worksheet>'
+    files = {
+        '[Content_Types].xml': '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>',
+        '_rels/.rels': '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>',
+        'xl/workbook.xml': '<?xml version="1.0" encoding="UTF-8"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="تعرفه‌ها" sheetId="1" r:id="rId1"/></sheets></workbook>',
+        'xl/_rels/workbook.xml.rels': '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>',
+        'xl/worksheets/sheet1.xml': sheet,
+    }
+    output = io.BytesIO()
+    with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as book:
+        for filename, content in files.items():
+            book.writestr(filename, content.encode('utf-8'))
+    response = HttpResponse(output.getvalue(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename="darman-soft-{kind}-template.xlsx"'
     return response
 
 # Create your views here.

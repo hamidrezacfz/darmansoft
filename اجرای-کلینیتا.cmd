@@ -13,7 +13,7 @@ if not exist "%PYTHON_EXE%" (
   exit /b 1
 )
 
-start "Clinita Server" /min "%PYTHON_EXE%" "%PROJECT_DIR%manage.py" runserver 127.0.0.1:8001 --noreload
+start "Clinita Server" /min "%PYTHON_EXE%" "%PROJECT_DIR%manage.py" runserver 127.0.0.1:8001
 timeout /t 3 /nobreak >nul
 
 :open_browser

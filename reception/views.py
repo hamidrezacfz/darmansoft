@@ -1,8 +1,8 @@
 from django.shortcuts import render
-from django.shortcuts import redirect
+from django.shortcuts import redirect, get_object_or_404
 from django.http import JsonResponse
 from .models import Admission
-from .forms import AdmissionForm
+from .forms import AdmissionForm, OpenAdmissionEditForm
 from patients.models import Patient
 from definitions.models import MedicalService
 from definitions.models import InsuranceTariff
@@ -49,6 +49,29 @@ def practitioner_lookup(request):
         return JsonResponse({'found': False})
     return JsonResponse({'found': True, 'id': person.id, 'name': person.name, 'role': person.role})
 
+def edit_open_admission(request, tracking_code):
+    admission = get_object_or_404(Admission.objects.select_related('patient'), tracking_code=tracking_code)
+    if admission.status != Admission.Status.OPEN:
+        return render(request, 'reception/edit_locked.html', {'admission': admission}, status=403)
+    initial = {'first_name': admission.patient.first_name, 'last_name': admission.patient.last_name,
+               'mobile': admission.patient.mobile, 'service': admission.service, 'practitioner': admission.practitioner,
+               'insurance': admission.insurance, 'patient_share': admission.patient_share,
+               'insurer_share': admission.insurer_share, 'supplementary_share': admission.supplementary_share}
+    form = OpenAdmissionEditForm(request.POST or None, initial=initial)
+    if request.method == 'POST' and form.is_valid():
+        if request.POST.get('confirmed') != '1':
+            return render(request, 'reception/confirm.html', {'form': form})
+        data = form.cleaned_data
+        patient = admission.patient
+        patient.first_name, patient.last_name, patient.mobile = data['first_name'], data['last_name'], data['mobile']
+        patient.save(update_fields=['first_name', 'last_name', 'mobile'])
+        admission.service, admission.practitioner, admission.insurance = data['service'], data['practitioner'], data['insurance']
+        admission.patient_share, admission.insurer_share, admission.supplementary_share = data['patient_share'], data['insurer_share'] or 0, data['supplementary_share'] or 0
+        admission.practitioner_name = str(admission.practitioner) if admission.practitioner else ''
+        admission.save()
+        return redirect(f'/reception/edit/{admission.tracking_code}/?saved=1')
+    return render(request, 'reception/edit.html', {'form': form, 'admission': admission, 'saved': request.GET.get('saved')})
+
 def index(request):
     form = AdmissionForm(request.POST or None)
     query = request.GET.get('q', '').strip()
@@ -82,7 +105,7 @@ def index(request):
             tracking_code=str(next_code),
         )
         if request.user.is_authenticated: admission.created_by = request.user
-        admission.save(); return redirect(f'/reception/?ref={admission.tracking_code}')
+        admission.save(); return redirect(f'/reception/edit/{admission.tracking_code}/?created=1')
     return render(request, 'reception/index.html', {'form': form, 'admissions': admissions[:50] if admissions is not None else None, 'query': query, 'referral_code': request.GET.get('ref', '')})
 
 # Create your views here.

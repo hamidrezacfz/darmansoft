@@ -1,5 +1,6 @@
 from django.shortcuts import render
 from django.shortcuts import redirect, get_object_or_404
+from django.http import JsonResponse
 from .forms import PaymentForm
 from .models import Payment
 from reception.models import Admission
@@ -7,6 +8,40 @@ from django.db.models import Sum
 from patients.models import Patient
 from definitions.models import InsuranceProvider, MedicalService, Practitioner
 from datetime import date
+
+
+def admission_section(admission):
+    """Return the originating clinic section for an admission."""
+    category = admission.service.category.name or ''
+    service_name = admission.service.name or ''
+    if getattr(admission, 'beautyvisit', None):
+        return 'زیبایی'
+    if category.startswith('دندانپزشکی - '):
+        return 'دندان‌پزشکی'
+    if any(term in f'{category} {service_name}' for term in ('تصویربرداری', 'ام‌آر‌آی', 'MRI', 'سی‌تی', 'سونوگرافی')):
+        return 'تصویربرداری'
+    return 'پذیرش'
+
+
+def referral_preview(request):
+    """Return an open referral before it is settled."""
+    code = request.GET.get('referral_code', '').strip()
+    if not code:
+        return JsonResponse({'found': False, 'message': 'کد ارجاع را وارد کنید.'}, status=400)
+    try:
+        admission = Admission.objects.select_related('patient', 'service__category', 'practitioner').get(
+            tracking_code=code, status=Admission.Status.OPEN
+        )
+    except Admission.DoesNotExist:
+        return JsonResponse({'found': False, 'message': 'پذیرش بازی با این کد پیدا نشد یا قبلاً تسویه شده است.'}, status=404)
+    return JsonResponse({
+        'found': True, 'referral_code': admission.tracking_code,
+        'patient': str(admission.patient), 'national_id': admission.patient.national_id,
+        'mobile': admission.patient.mobile or '—', 'section': admission_section(admission),
+        'service': admission.service.name,
+        'practitioner': str(admission.practitioner) if admission.practitioner else '—',
+        'amount': str(admission.patient_share),
+    })
 
 def parse_report_date(value):
     """Accept Gregorian YYYY-MM-DD or Persian YYYY/MM/DD and return a date."""
@@ -70,8 +105,14 @@ def payment_list(request):
     today = timezone.localdate()
     today_payments = Payment.objects.filter(created_at__date=today)
     method_totals = {method: today_payments.filter(method=method).aggregate(value=Sum('amount'))['value'] or 0 for method, _ in Payment.Method.choices}
-    pending = Admission.objects.filter(status=Admission.Status.OPEN).select_related('patient', 'service__category', 'practitioner').order_by('created_at')
-    return render(request, 'billing/list.html', {'form': form, 'pending': pending, 'method_totals': method_totals, 'pending_count': pending.count()})
+    pending = Admission.objects.filter(status=Admission.Status.OPEN).select_related(
+        'patient', 'service__category', 'practitioner', 'beautyvisit'
+    ).order_by('created_at')
+    pending_rows = [{'admission': admission, 'section': admission_section(admission)} for admission in pending]
+    return render(request, 'billing/list.html', {
+        'form': form, 'pending_rows': pending_rows, 'method_choices': Payment.Method.choices,
+        'method_totals': method_totals, 'pending_count': len(pending_rows),
+    })
 def payment_receipt(request, payment_id):
     payment = get_object_or_404(Payment.objects.select_related('patient', 'admission__service', 'admission__insurance'), pk=payment_id)
     return render(request, 'billing/receipt.html', {'payment': payment})

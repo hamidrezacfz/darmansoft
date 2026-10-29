@@ -63,6 +63,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'licensing.middleware.LicenseRequiredMiddleware',
     'accounts.middleware.LoginRequiredMiddleware',
+    'core.middleware.AdmissionConfirmationMiddleware',
 ]
 
 LOGIN_URL = '/login/'
