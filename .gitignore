@@ -27,3 +27,4 @@ tools/license_registry.csv
 tools/license-registry.csv
 installer/work/
 *.log
+server.err
