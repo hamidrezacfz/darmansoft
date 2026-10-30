@@ -23,6 +23,7 @@ def tariff_preview(request):
     if insurance_id:
         tariff = InsuranceTariff.objects.filter(service=service, insurance_id=insurance_id).first()
         if tariff:
+            tariff.apply_calculation()
             patient_share, insurer_share = tariff.patient_share, tariff.insurer_share
     return JsonResponse({'found': True, 'patient_share': str(patient_share), 'insurer_share': str(insurer_share)})
 

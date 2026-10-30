@@ -25,7 +25,7 @@ class ImagingAdmissionForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        groups = ServiceCategory.objects.filter(name__in=IMAGING_GROUPS).order_by('name')
+        groups = ServiceCategory.objects.filter(panel=ServiceCategory.Panel.IMAGING).order_by('name')
         self.fields['group'].queryset = groups
         self.fields['service'].queryset = MedicalService.objects.filter(active=True, category__in=groups).select_related('category').order_by('category__name', 'name')
 

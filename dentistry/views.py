@@ -31,7 +31,7 @@ def index(request):
 
 
 def admission(request):
-    groups = ServiceCategory.objects.filter(name__startswith=PREFIX)
+    groups = ServiceCategory.objects.filter(panel=ServiceCategory.Panel.DENTISTRY)
     services = MedicalService.objects.filter(category__in=groups, active=True).order_by('category__name', 'name')
     form = DentalAdmissionForm(request.POST or None, services=services)
     if request.method == 'POST' and form.is_valid():
@@ -56,7 +56,7 @@ def admission(request):
 def report(request):
     from django.db.models import Sum
     from reception.models import Admission
-    groups = ServiceCategory.objects.filter(name__startswith=PREFIX)
+    groups = ServiceCategory.objects.filter(panel=ServiceCategory.Panel.DENTISTRY)
     rows = Admission.objects.filter(service__category__in=groups).select_related('patient', 'service', 'practitioner').order_by('-created_at')
     query = request.GET.get('q', '').strip()
     practitioner_id = request.GET.get('practitioner', '').strip()

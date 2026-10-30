@@ -1,6 +1,6 @@
 from django import forms
 
-from definitions.models import MedicalService, Practitioner
+from definitions.models import MedicalService, Practitioner, ServiceCategory
 from core.jalali import from_jalali
 
 from .models import BeautyVisit
@@ -16,7 +16,7 @@ class BeautyVisitForm(forms.Form):
         label='خدمت زیبایی، سلامت یا مراقبت',
         queryset=MedicalService.objects.filter(
             active=True,
-            category__name__in=['زیبایی', 'سلامت'],
+            category__panel=ServiceCategory.Panel.AESTHETICS,
         ).select_related('category'),
         empty_label='انتخاب خدمت',
     )

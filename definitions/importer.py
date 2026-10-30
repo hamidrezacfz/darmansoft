@@ -95,6 +95,16 @@ def _amount(value, title, positive=False):
         raise ValueError(f'«{title}» نامعتبر است.')
     return amount
 
+def _amount_or_zero(value, title):
+    return _amount(value or '0', title)
+
+def _tariff_choice(value, options, title):
+    normalized = _normal(value)
+    for key, labels in options.items():
+        if normalized in {_normal(item) for item in labels}:
+            return key
+    raise ValueError(f'«{title}» نامعتبر است.')
+
 def _required(headers, *names):
     if any(_normal(name) not in headers for name in names):
         raise ValueError('ستون‌های لازم: ' + '، '.join(names))
@@ -104,35 +114,33 @@ def _find_service(code, standard_code, category, name):
         return MedicalService.objects.filter(code=code).first()
     if standard_code:
         return MedicalService.objects.filter(standard_code=standard_code).first()
-    return MedicalService.objects.filter(category__name=category, name=name).first()
+    return MedicalService.objects.filter(category=category, name=name).first()
 
 def _parse_services(upload, imaging=False):
     rows = read_rows(upload)
     if not rows:
         raise ValueError('فایل خالی است.')
     headers = _headers(rows[0])
-    primary = 'گروه خدمت' if imaging else 'دسته'
-    _required(headers, primary, 'نام خدمت', 'تعرفه آزاد')
-    allowed = {'تصویربرداری', 'سی تی اسکن', 'سونوگرافی', 'MRI'}
+    _required(headers, 'کد دسته', 'نام خدمت')
     records, errors, seen = [], [], set()
     for number, row in enumerate(rows[1:], 2):
         if not any(str(v).strip() for v in row):
             continue
         try:
-            category = _value(row, headers, primary, 'دسته', 'گروه')
+            category_code = _value(row, headers, 'کد دسته')
             name = _value(row, headers, 'نام خدمت', 'نام')
             code = _value(row, headers, 'کد داخلی', 'کد')
             standard = _value(row, headers, 'کد استاندارد')
-            price = _amount(_value(row, headers, 'تعرفه آزاد', 'تعرفه'), 'تعرفه آزاد', True)
+            category = ServiceCategory.objects.filter(code=category_code).first()
             if not category or not name:
-                raise ValueError('دسته و نام خدمت الزامی است.')
-            if imaging and category not in allowed:
-                raise ValueError('گروه خدمت نامعتبر است.')
-            key = code or standard or f'{category}|{name}'
+                raise ValueError('کد دسته معتبر و نام خدمت الزامی است.')
+            if imaging and category.panel != ServiceCategory.Panel.IMAGING:
+                raise ValueError('کد دسته باید مربوط به پنل تصویربرداری باشد.')
+            key = code or standard or f'{category_code}|{name}'
             if key in seen:
                 raise ValueError('این خدمت در فایل تکراری است.')
             seen.add(key)
-            records.append((category, name, code, standard, price))
+            records.append((category, name, code, standard))
         except ValueError as exc:
             errors.append(f'ردیف {number}: {exc}')
     return records, errors
@@ -140,10 +148,9 @@ def _parse_services(upload, imaging=False):
 def _save_services(records):
     created = updated = 0
     with transaction.atomic():
-        for category_name, name, code, standard, price in records:
-            category, _ = ServiceCategory.objects.get_or_create(name=category_name)
-            service = _find_service(code, standard, category_name, name)
-            values = {'category': category, 'name': name, 'base_price': price, 'active': True}
+        for category, name, code, standard in records:
+            service = _find_service(code, standard, category, name)
+            values = {'category': category, 'name': name, 'active': True}
             if code: values['code'] = code
             if standard: values['standard_code'] = standard
             if service:
@@ -165,7 +172,7 @@ def import_tariffs(upload):
     rows = read_rows(upload)
     if not rows: raise ValueError('فایل خالی است.')
     headers = _headers(rows[0])
-    _required(headers, 'کد خدمت', 'سازمان بیمه', 'نام بیمه', 'سهم بیمار', 'سهم بیمه')
+    _required(headers, 'کد خدمت', 'سازمان بیمه', 'نام بیمه', 'روش قیمت گذاری', 'روش سهم')
     records, errors, seen = [], [], set()
     for number, row in enumerate(rows[1:], 2):
         if not any(str(v).strip() for v in row): continue
@@ -177,13 +184,41 @@ def import_tariffs(upload):
             key = (service.pk, _normal(organization), _normal(name))
             if key in seen: raise ValueError('این تعرفه در فایل تکراری است.')
             seen.add(key)
-            records.append((service, organization, name, _amount(_value(row, headers, 'سهم بیمار'), 'سهم بیمار'), _amount(_value(row, headers, 'سهم بیمه'), 'سهم بیمه'), _amount(_value(row, headers, 'سهم بیمه تکمیلی') or '0', 'سهم تکمیلی')))
+            pricing_method = _tariff_choice(_value(row, headers, 'روش قیمت گذاری'), {
+                InsuranceTariff.PricingMethod.FIXED: ('fixed', 'ثابت', 'مبلغ ثابت'),
+                InsuranceTariff.PricingMethod.K_BASED: ('k', 'k_based', 'بر اساس k', 'محاسبه بر اساس k'),
+            }, 'روش قیمت گذاری')
+            share_mode = _tariff_choice(_value(row, headers, 'روش سهم'), {
+                InsuranceTariff.ShareMode.AMOUNT: ('amount', 'مبلغ', 'ریالی', 'مبلغ ریالی'),
+                InsuranceTariff.ShareMode.PERCENT: ('percent', 'درصد', 'درصدی'),
+            }, 'روش سهم')
+            fixed_total = _amount_or_zero(_value(row, headers, 'مبلغ کل ثابت'), 'مبلغ کل ثابت')
+            technical_factor = _amount_or_zero(_value(row, headers, 'ضریب k فنی', 'ضریب k فني'), 'ضریب K فنی')
+            professional_factor = _amount_or_zero(_value(row, headers, 'ضریب k حرفه ای', 'ضریب k حرفه‌ای'), 'ضریب K حرفه‌ای')
+            if pricing_method == InsuranceTariff.PricingMethod.FIXED and not fixed_total:
+                raise ValueError('برای روش مبلغ ثابت، مبلغ کل ثابت الزامی است.')
+            if pricing_method == InsuranceTariff.PricingMethod.K_BASED and not (technical_factor or professional_factor):
+                raise ValueError('برای روش K، حداقل یک ضریب K الزامی است.')
+            amounts = [_amount_or_zero(_value(row, headers, header), header) for header in ('سهم بیمار', 'سهم سازمان', 'سهم تکمیلی', 'مابه التفاوت')]
+            percents = [_amount_or_zero(_value(row, headers, header), header) for header in ('درصد سهم بیمار', 'درصد سهم سازمان', 'درصد سهم تکمیلی', 'درصد مابه التفاوت')]
+            if share_mode == InsuranceTariff.ShareMode.PERCENT and sum(percents) > 100:
+                raise ValueError('جمع درصد سهم‌ها بیشتر از ۱۰۰ است.')
+            records.append((service, organization, name, pricing_method, fixed_total, technical_factor, professional_factor, share_mode, amounts, percents))
         except ValueError as exc: errors.append(f'ردیف {number}: {exc}')
     if errors: return 0, 0, errors
     created = updated = 0
     with transaction.atomic():
-        for service, organization, name, patient, insurer, supplementary in records:
-            insurance, _ = InsuranceProvider.objects.get_or_create(organization=organization, name=name)
-            _, made = InsuranceTariff.objects.update_or_create(service=service, insurance=insurance, defaults={'patient_share': patient, 'insurer_share': insurer, 'supplementary_share': supplementary})
+        for service, organization, name, pricing_method, fixed_total, technical_factor, professional_factor, share_mode, amounts, percents in records:
+            insurance = InsuranceProvider.objects.filter(organization=organization, name=name).first()
+            if not insurance:
+                raise ValueError(f'بیمه «{organization} — {name}» پیش از ورود تعرفه تعریف نشده است.')
+            tariff, made = InsuranceTariff.objects.get_or_create(service=service, insurance=insurance, defaults={'patient_share': 0, 'insurer_share': 0})
+            tariff.pricing_method, tariff.fixed_total = pricing_method, fixed_total
+            tariff.technical_k_coefficient, tariff.professional_k_coefficient = technical_factor, professional_factor
+            tariff.share_mode = share_mode
+            tariff.patient_share, tariff.insurer_share, tariff.supplementary_share, tariff.difference_share = amounts
+            tariff.patient_share_percent, tariff.insurer_share_percent, tariff.supplementary_share_percent, tariff.difference_percent = percents
+            tariff.apply_calculation()
+            tariff.save()
             created += made; updated += not made
     return created, updated, []

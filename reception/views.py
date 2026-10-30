@@ -4,7 +4,7 @@ from django.http import JsonResponse
 from .models import Admission
 from .forms import AdmissionForm, OpenAdmissionEditForm
 from patients.models import Patient
-from definitions.models import MedicalService
+from definitions.models import MedicalService, ServiceCategory
 from definitions.models import InsuranceTariff
 from definitions.models import Practitioner
 
@@ -13,16 +13,17 @@ def tariff_preview(request):
     insurance_id = request.GET.get('insurance', '')
     try:
         service = MedicalService.objects.get(code=code, active=True)
-        if service.category.name.startswith('دندانپزشکی - '):
+        if service.category.panel != ServiceCategory.Panel.GENERAL:
             raise MedicalService.DoesNotExist
     except MedicalService.DoesNotExist:
-        service = MedicalService.objects.filter(name__iexact=code, active=True).exclude(category__name__startswith='دندانپزشکی - ').first()
+        service = MedicalService.objects.filter(name__iexact=code, active=True, category__panel=ServiceCategory.Panel.GENERAL).first()
         if not service:
             return JsonResponse({'found': False})
     patient_share, insurer_share, supplementary_share = service.base_price, 0, 0
     if insurance_id:
         tariff = InsuranceTariff.objects.filter(service=service, insurance_id=insurance_id).first()
         if tariff:
+            tariff.apply_calculation()
             patient_share, insurer_share, supplementary_share = tariff.patient_share, tariff.insurer_share, tariff.supplementary_share
     return JsonResponse({'found': True, 'service': service.name, 'base_price': str(service.base_price), 'patient_share': str(patient_share), 'insurer_share': str(insurer_share), 'supplementary_share': str(supplementary_share)})
 
@@ -30,7 +31,7 @@ def service_lookup(request):
     query = request.GET.get('q', '').strip()
     if len(query) < 2:
         return JsonResponse({'items': []})
-    services = (MedicalService.objects.filter(active=True, code__icontains=query) | MedicalService.objects.filter(active=True, name__icontains=query)).exclude(category__name__startswith='دندانپزشکی - ').distinct()[:8]
+    services = (MedicalService.objects.filter(active=True, code__icontains=query, category__panel=ServiceCategory.Panel.GENERAL) | MedicalService.objects.filter(active=True, name__icontains=query, category__panel=ServiceCategory.Panel.GENERAL)).distinct()[:8]
     # Older services may not have an internal code. In that case the service
     # name is safely used as the selectable value.
     return JsonResponse({'items': [{'code': x.code or x.name, 'name': x.name, 'price': str(x.base_price)} for x in services]})
@@ -59,8 +60,6 @@ def edit_open_admission(request, tracking_code):
                'insurer_share': admission.insurer_share, 'supplementary_share': admission.supplementary_share}
     form = OpenAdmissionEditForm(request.POST or None, initial=initial)
     if request.method == 'POST' and form.is_valid():
-        if request.POST.get('confirmed') != '1':
-            return render(request, 'reception/confirm.html', {'form': form})
         data = form.cleaned_data
         patient = admission.patient
         patient.first_name, patient.last_name, patient.mobile = data['first_name'], data['last_name'], data['mobile']
@@ -80,12 +79,14 @@ def index(request):
         all_admissions = Admission.objects.select_related('patient', 'service', 'insurance', 'practitioner')
         admissions = all_admissions.filter(patient__national_id__icontains=query) | all_admissions.filter(patient__first_name__icontains=query) | all_admissions.filter(patient__last_name__icontains=query) | all_admissions.filter(tracking_code__icontains=query)
     if request.method == 'POST' and form.is_valid():
+        if request.POST.get('confirmed') != '1':
+            return render(request, 'reception/confirm.html', {'form': form})
         data = form.cleaned_data
         try:
             service = MedicalService.objects.get(code=data['service_code'], active=True)
-            if service.category.name.startswith('دندانپزشکی - '): raise MedicalService.DoesNotExist
+            if service.category.panel != ServiceCategory.Panel.GENERAL: raise MedicalService.DoesNotExist
         except MedicalService.DoesNotExist:
-            service = MedicalService.objects.filter(name__iexact=data['service_code'], active=True).exclude(category__name__startswith='دندانپزشکی - ').first()
+            service = MedicalService.objects.filter(name__iexact=data['service_code'], active=True, category__panel=ServiceCategory.Panel.GENERAL).first()
             if not service:
                 form.add_error('service_code', 'خدمتی با این کد یا نام پیدا نشد.')
                 return render(request, 'reception/index.html', {'form': form, 'admissions': admissions, 'query': query})
@@ -105,7 +106,8 @@ def index(request):
             tracking_code=str(next_code),
         )
         if request.user.is_authenticated: admission.created_by = request.user
-        admission.save(); return redirect(f'/reception/edit/{admission.tracking_code}/?created=1')
+        admission.save()
+        return redirect(f'/reception/?ref={admission.tracking_code}')
     return render(request, 'reception/index.html', {'form': form, 'admissions': admissions[:50] if admissions is not None else None, 'query': query, 'referral_code': request.GET.get('ref', '')})
 
 # Create your views here.
