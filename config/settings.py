@@ -90,13 +90,37 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/6.1/ref/settings/#databases
+def database_environment(name, default=''):
+    """Read a local database setting without putting credentials in source code.
 
+    A process started before Windows refreshed its user environment won't see
+    newly-created variables.  On Windows, fall back to the current user's
+    Environment registry key so the desktop launcher works immediately.
+    """
+    value = os.environ.get(name)
+    if value:
+        return value
+    if os.name == 'nt':
+        try:
+            import winreg
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r'Environment') as key:
+                return winreg.QueryValueEx(key, name)[0]
+        except (FileNotFoundError, OSError):
+            pass
+    return default
+
+
+# PostgreSQL is the shared production database. Credentials are kept in the
+# Windows user environment instead of source control. The legacy SQLite file
+# is retained only as a migration backup.
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': Path(os.environ.get('CLINITA_DB_PATH', BASE_DIR / 'db.sqlite3')),
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': database_environment('DARMANSOFT_DB_NAME', 'darmansoft'),
+        'USER': database_environment('DARMANSOFT_DB_USER', 'darmansoft'),
+        'PASSWORD': database_environment('DARMANSOFT_DB_PASSWORD'),
+        'HOST': database_environment('DARMANSOFT_DB_HOST', '127.0.0.1'),
+        'PORT': database_environment('DARMANSOFT_DB_PORT', '5432'),
     }
 }
 

@@ -18,8 +18,14 @@ def seed(apps, schema_editor):
     Service = apps.get_model('definitions', 'MedicalService')
     Profile = apps.get_model('dentistry', 'DentalServiceProfile')
     number = 1
-    for group, items in SERVICES:
-        category, _ = Category.objects.get_or_create(name='دندانپزشکی - ' + group)
+    for category_number, (group, items) in enumerate(SERVICES, start=1):
+        category, _ = Category.objects.get_or_create(
+            name='دندانپزشکی - ' + group,
+            defaults={
+                'code': f'DENT-{category_number:02d}',
+                'panel': 'dentistry',
+            },
+        )
         for name, scope in items:
             code = f'DEN-{number:03d}'
             service, _ = Service.objects.get_or_create(code=code, defaults={'category_id': category.id, 'name': name, 'base_price': 0, 'active': True})
@@ -35,5 +41,4 @@ class Migration(migrations.Migration):
             ('tooth_scope', models.CharField(blank=True, max_length=100, verbose_name='شماره / ناحیه دندان')),
             ('service', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='dental_profile', to='definitions.medicalservice')),
         ]),
-        migrations.RunPython(seed, migrations.RunPython.noop),
     ]

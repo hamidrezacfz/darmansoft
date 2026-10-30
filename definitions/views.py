@@ -3,9 +3,10 @@ import zipfile
 from xml.sax.saxutils import escape
 from django.http import HttpResponse
 from django.contrib import messages
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
 from django.shortcuts import redirect
 from django.db import transaction
+from django.db.models.deletion import ProtectedError
 from .models import ServiceCategory, MedicalService, InsuranceProvider, InsuranceTariff, Practitioner, PractitionerGroup
 from .forms import CategoryForm, ServiceForm, InsuranceForm, TariffForm, PractitionerForm, PractitionerGroupForm
 from .importer import import_imaging_services, import_services, import_tariffs
@@ -14,6 +15,34 @@ def practitioners(request):
     form = PractitionerForm(request.POST or None)
     if request.method == 'POST' and form.is_valid(): form.save(); return redirect('practitioners')
     return render(request, 'definitions/practitioners.html', {'form': form, 'practitioners': Practitioner.objects.select_related('group')})
+
+
+DELETABLE_DEFINITIONS = {
+    'categories': ServiceCategory,
+    'services': MedicalService,
+    'insurances': InsuranceProvider,
+    'tariffs': InsuranceTariff,
+    'practitioner-groups': PractitionerGroup,
+    'practitioners': Practitioner,
+}
+
+
+def delete_definition(request, kind, pk):
+    """Delete a base definition only when it isn't used by clinical records."""
+    if request.method != 'POST' or kind not in DELETABLE_DEFINITIONS:
+        return redirect('definitions')
+
+    item = get_object_or_404(DELETABLE_DEFINITIONS[kind], pk=pk)
+    try:
+        item.delete()
+        messages.success(request, 'مورد انتخاب‌شده حذف شد.')
+    except ProtectedError:
+        messages.error(
+            request,
+            'این مورد در پذیرش، نوبت‌دهی یا اطلاعات ثبت‌شده استفاده شده و برای حفظ سوابق قابل حذف نیست.',
+        )
+    target = 'practitioners' if kind == 'practitioners' else 'definition_setup'
+    return redirect(target, **({} if kind == 'practitioners' else {'kind': kind}))
 
 def setup(request, kind):
     options = {'categories': ('دسته‌های خدمت', CategoryForm, ServiceCategory), 'services': ('خدمات پزشکی', ServiceForm, MedicalService), 'insurances': ('بیمه‌ها', InsuranceForm, InsuranceProvider), 'tariffs': ('تعرفه‌های بیمه', TariffForm, InsuranceTariff), 'practitioner-groups': ('گروه‌های پزشکان و پرسنل', PractitionerGroupForm, PractitionerGroup)}
@@ -38,7 +67,13 @@ def setup(request, kind):
     items = model.objects.all()
     if kind == 'services': items = items.select_related('category').order_by('category__panel', 'category__name', 'name')
     if kind == 'categories': items = items.order_by('panel', 'name')
-    return render(request, 'definitions/setup.html', {'title': title, 'form': form, 'items': items, 'is_tariff': kind == 'tariffs'})
+    return render(request, 'definitions/setup.html', {
+        'title': title,
+        'form': form,
+        'items': items,
+        'kind': kind,
+        'is_tariff': kind == 'tariffs',
+    })
 def index(request):
     form_type = request.POST.get('form_type')
     if request.method == 'POST' and form_type in FORMS:

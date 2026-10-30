@@ -26,5 +26,6 @@ installer-test-data/
 tools/license_registry.csv
 tools/license-registry.csv
 installer/work/
+installer/wheels/
 *.log
 server.err
