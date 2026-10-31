@@ -97,10 +97,10 @@ def index(request):
                 return render(request, 'reception/index.html', {'form': form, 'admissions': admissions, 'query': query})
         patient, created = Patient.objects.get_or_create(
             national_id=data['national_id'],
-            defaults={'first_name': data['first_name'], 'last_name': data['last_name'], 'mobile': data['mobile']},
+            defaults={'first_name': data['first_name'], 'last_name': data['last_name'], 'mobile': data['mobile'], 'gender': data['gender'], 'age': data['age']},
         )
         if not created and data['mobile']:
-            patient.mobile = data['mobile']; patient.save(update_fields=['mobile'])
+            patient.mobile = data['mobile']; patient.gender = data['gender']; patient.age = data['age']; patient.save(update_fields=['mobile', 'gender', 'age'])
         last_admission = Admission.objects.order_by('-id').first()
         next_code = 100
         if last_admission and last_admission.tracking_code.isdigit():

@@ -20,11 +20,11 @@ def index(request):
         data = form.cleaned_data
         patient, created = Patient.objects.get_or_create(
             national_id=data['national_id'],
-            defaults={'first_name': data['first_name'], 'last_name': data['last_name'], 'mobile': data['mobile']},
+            defaults={'first_name': data['first_name'], 'last_name': data['last_name'], 'mobile': data['mobile'], 'gender': data['gender'], 'age': data['age']},
         )
         if not created:
             changed = []
-            for field in ('first_name', 'last_name', 'mobile'):
+            for field in ('first_name', 'last_name', 'mobile', 'gender', 'age'):
                 if data[field] and getattr(patient, field) != data[field]:
                     setattr(patient, field, data[field])
                     changed.append(field)

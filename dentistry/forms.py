@@ -45,6 +45,8 @@ class DentalAdmissionForm(forms.Form):
     first_name = forms.CharField(label='نام', max_length=50)
     last_name = forms.CharField(label='نام خانوادگی', max_length=70)
     mobile = forms.CharField(label='شماره همراه', max_length=15, required=False)
+    gender = forms.ChoiceField(label='جنسیت', choices=[('', 'انتخاب کنید'), ('male', 'مرد'), ('female', 'زن'), ('child', 'کودک')], required=False)
+    age = forms.IntegerField(label='سن', min_value=0, max_value=150, required=False)
     service = DentalServiceChoiceField(label='کد یا نام خدمت دندانپزشکی', queryset=MedicalService.objects.none())
     practitioner = forms.ModelChoiceField(label='دندان‌پزشک / انجام‌دهنده', queryset=Practitioner.objects.filter(active=True).filter(Q(active_panels__contains=['dentistry']) | Q(active_panels=[])), required=False)
     tooth_numbers = forms.CharField(required=False, widget=forms.HiddenInput())

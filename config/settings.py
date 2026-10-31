@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'aesthetics',
     'dentistry',
     'imaging',
+      'laboratory',
     'licensing',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -64,6 +65,7 @@ MIDDLEWARE = [
     'licensing.middleware.LicenseRequiredMiddleware',
     'accounts.middleware.LoginRequiredMiddleware',
     'core.middleware.AdmissionConfirmationMiddleware',
+    'core.global_toolbar.GlobalToolbarMiddleware',
 ]
 
 LOGIN_URL = '/login/'

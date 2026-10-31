@@ -34,7 +34,7 @@ def index(request):
         data = form.cleaned_data
         patient, _ = Patient.objects.update_or_create(
             national_id=data['national_id'],
-            defaults={'first_name': data['first_name'], 'last_name': data['last_name'], 'mobile': data['mobile']},
+            defaults={'first_name': data['first_name'], 'last_name': data['last_name'], 'mobile': data['mobile'], 'gender': data['gender'], 'age': data['age']},
         )
         last = Admission.objects.order_by('-id').first()
         next_code = int(last.tracking_code) + 1 if last and last.tracking_code.isdigit() else 100

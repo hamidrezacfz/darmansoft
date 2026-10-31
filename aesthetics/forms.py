@@ -17,6 +17,8 @@ class BeautyVisitForm(forms.Form):
     first_name = forms.CharField(label='نام', max_length=50)
     last_name = forms.CharField(label='نام خانوادگی', max_length=70)
     mobile = forms.CharField(label='شماره همراه', max_length=15, required=False)
+    gender = forms.ChoiceField(label='جنسیت', choices=[('', 'انتخاب کنید'), ('male', 'مرد'), ('female', 'زن'), ('child', 'کودک')], required=False)
+    age = forms.IntegerField(label='سن', min_value=0, max_value=150, required=False)
     visit_type = forms.ChoiceField(label='نوع ثبت', choices=BeautyVisit.VisitType.choices)
     service = BeautyServiceChoiceField(
         label='کد یا نام خدمت زیبایی، سلامت یا مراقبت',

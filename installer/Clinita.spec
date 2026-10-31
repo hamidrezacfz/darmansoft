@@ -34,12 +34,16 @@ tmp_ret = collect_all('aesthetics')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 tmp_ret = collect_all('dentistry')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('imaging')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('laboratory')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 tmp_ret = collect_all('licensing')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
 # Django templates are runtime files and must be copied explicitly into the
 # Windows bundle.  This also keeps newly added panels available after install.
-for app_name in ('core', 'patients', 'appointments', 'billing', 'definitions', 'reception', 'records', 'accounts', 'accounting', 'aesthetics', 'dentistry', 'licensing'):
+for app_name in ('core', 'patients', 'appointments', 'billing', 'definitions', 'reception', 'records', 'accounts', 'accounting', 'aesthetics', 'dentistry', 'imaging', 'laboratory', 'licensing'):
     template_dir = Path('..') / app_name / 'templates'
     if template_dir.exists():
         datas.append((str(template_dir), f'{app_name}/templates'))
@@ -47,6 +51,8 @@ for app_name in ('core', 'patients', 'appointments', 'billing', 'definitions', '
 hiddenimports += [
     'aesthetics.apps', 'aesthetics.models', 'aesthetics.forms', 'aesthetics.urls', 'aesthetics.views',
     'dentistry.apps', 'dentistry.models', 'dentistry.forms', 'dentistry.urls', 'dentistry.views',
+    'imaging.apps', 'imaging.forms', 'imaging.urls', 'imaging.views',
+    'laboratory.apps', 'laboratory.models', 'laboratory.forms', 'laboratory.urls', 'laboratory.views',
     'licensing.apps', 'licensing.middleware', 'licensing.service', 'licensing.urls', 'licensing.views',
 ]
 
