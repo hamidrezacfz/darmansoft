@@ -40,8 +40,11 @@ class WorkSchedule(models.Model):
     practitioner = models.ForeignKey(Practitioner, null=True, blank=True, on_delete=models.CASCADE, verbose_name='پزشک / انجام‌دهنده')
     department = models.ForeignKey(ServiceCategory, null=True, blank=True, on_delete=models.CASCADE, verbose_name='بخش')
     weekday = models.PositiveSmallIntegerField('روز هفته', choices=Weekday.choices)
+    schedule_date = models.DateField('تاریخ مشخص', null=True, blank=True)
     start_time = models.TimeField('شروع کار')
     end_time = models.TimeField('پایان کار')
+    shift_name = models.CharField('عنوان شیفت', max_length=30, blank=True)
+    capacity = models.PositiveIntegerField('ظرفیت نوبت شیفت', default=1)
     active = models.BooleanField('فعال', default=True)
 
     class Meta:

@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from django.shortcuts import redirect, get_object_or_404
 from django.http import JsonResponse
+from django.db.models import Q
 from .models import Admission
 from .forms import AdmissionForm, OpenAdmissionEditForm
 from patients.models import Patient
@@ -29,12 +30,16 @@ def tariff_preview(request):
 
 def service_lookup(request):
     query = request.GET.get('q', '').strip()
+    panel = request.GET.get('panel', ServiceCategory.Panel.GENERAL)
+    valid_panels = {choice for choice, _ in ServiceCategory.Panel.choices}
+    if panel not in valid_panels:
+        panel = ServiceCategory.Panel.GENERAL
     if len(query) < 2:
         return JsonResponse({'items': []})
-    services = (MedicalService.objects.filter(active=True, code__icontains=query, category__panel=ServiceCategory.Panel.GENERAL) | MedicalService.objects.filter(active=True, name__icontains=query, category__panel=ServiceCategory.Panel.GENERAL)).distinct()[:8]
+    services = MedicalService.objects.filter(active=True, category__panel=panel).filter(Q(code__icontains=query) | Q(name__icontains=query)).select_related('category').distinct()[:8]
     # Older services may not have an internal code. In that case the service
     # name is safely used as the selectable value.
-    return JsonResponse({'items': [{'code': x.code or x.name, 'name': x.name, 'price': str(x.base_price)} for x in services]})
+    return JsonResponse({'items': [{'id': x.pk, 'code': x.code or '', 'name': x.name, 'category': x.category.name, 'price': str(x.base_price)} for x in services]})
 
 def patient_lookup(request):
     national_id = request.GET.get('national_id', '').strip()

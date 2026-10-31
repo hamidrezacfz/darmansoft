@@ -1,9 +1,15 @@
 from django import forms
+from django.db.models import Q
 
 from definitions.models import MedicalService, Practitioner, ServiceCategory
 from core.jalali import from_jalali
 
 from .models import BeautyVisit
+
+
+class BeautyServiceChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, service):
+        return f'{service.code or "بدون کد"} — {service.category.name} — {service.name}'
 
 
 class BeautyVisitForm(forms.Form):
@@ -12,15 +18,15 @@ class BeautyVisitForm(forms.Form):
     last_name = forms.CharField(label='نام خانوادگی', max_length=70)
     mobile = forms.CharField(label='شماره همراه', max_length=15, required=False)
     visit_type = forms.ChoiceField(label='نوع ثبت', choices=BeautyVisit.VisitType.choices)
-    service = forms.ModelChoiceField(
-        label='خدمت زیبایی، سلامت یا مراقبت',
+    service = BeautyServiceChoiceField(
+        label='کد یا نام خدمت زیبایی، سلامت یا مراقبت',
         queryset=MedicalService.objects.filter(
             active=True,
             category__panel=ServiceCategory.Panel.AESTHETICS,
         ).select_related('category'),
         empty_label='انتخاب خدمت',
     )
-    practitioner = forms.ModelChoiceField(label='انجام‌دهنده', queryset=Practitioner.objects.filter(active=True), required=False)
+    practitioner = forms.ModelChoiceField(label='انجام‌دهنده', queryset=Practitioner.objects.filter(active=True).filter(Q(active_panels__contains=['aesthetics']) | Q(active_panels=[])), required=False)
     treatment_area = forms.CharField(label='ناحیه / مورد خدمت', max_length=120, required=False, help_text='مثلاً صورت، پوست، مو یا مراقبت عمومی')
     notes = forms.CharField(label='توضیحات', required=False, widget=forms.Textarea(attrs={'rows': 3}))
     next_session_date = forms.CharField(label='تاریخ جلسه بعد', required=False, widget=forms.TextInput(attrs={'placeholder': 'انتخاب از تقویم شمسی', 'readonly': 'readonly'}))

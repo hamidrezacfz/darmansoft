@@ -1,4 +1,5 @@
 from django import forms
+from django.db.models import Q
 
 from definitions.models import InsuranceProvider, MedicalService, Practitioner, ServiceCategory
 
@@ -8,7 +9,7 @@ IMAGING_GROUPS = ('تصویربرداری', 'سی تی اسکن', 'سونوگر�
 
 class ImagingServiceChoiceField(forms.ModelChoiceField):
     def label_from_instance(self, service):
-        return f'{service.category.name} — {service.name}'
+        return f'{service.code or "بدون کد"} — {service.category.name} — {service.name}'
 
 
 class ImagingAdmissionForm(forms.Form):
@@ -18,7 +19,7 @@ class ImagingAdmissionForm(forms.Form):
     mobile = forms.CharField(label='شماره همراه', max_length=15, required=False)
     group = forms.ModelChoiceField(label='گروه خدمت تصویربرداری', queryset=ServiceCategory.objects.none(), empty_label='انتخاب گروه')
     service = ImagingServiceChoiceField(label='خدمت', queryset=MedicalService.objects.none(), empty_label='انتخاب خدمت')
-    practitioner = forms.ModelChoiceField(label='پزشک / کارشناس انجام‌دهنده', queryset=Practitioner.objects.filter(active=True), required=False, empty_label='انتخاب انجام‌دهنده')
+    practitioner = forms.ModelChoiceField(label='پزشک / کارشناس انجام‌دهنده', queryset=Practitioner.objects.filter(active=True).filter(Q(active_panels__contains=['imaging']) | Q(active_panels=[])), required=False, empty_label='انتخاب انجام‌دهنده')
     insurance = forms.ModelChoiceField(label='بیمه', queryset=InsuranceProvider.objects.filter(active=True), required=False, empty_label='بدون بیمه')
     patient_share = forms.DecimalField(label='مبلغ پرداخت بیمار (ریال)', max_digits=12, decimal_places=0)
     insurer_share = forms.DecimalField(label='مبلغ سهم بیمه (ریال)', max_digits=12, decimal_places=0, required=False, initial=0)

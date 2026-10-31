@@ -1,8 +1,10 @@
 from django.shortcuts import render
 from django.shortcuts import redirect, get_object_or_404
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
+from django.contrib.auth.models import User
+import csv
 from .forms import PaymentForm
-from .models import Payment
+from .models import Payment, PaymentRefund
 from reception.models import Admission
 from django.db.models import Sum
 from patients.models import Patient
@@ -74,14 +76,14 @@ def parse_report_date(value):
     except (ValueError, TypeError):
         return None
 
-def report(request):
+def report(request, template='billing/report.html'):
     payments = Payment.objects.select_related('patient', 'admission__insurance', 'admission__service', 'admission__practitioner')
     date_from = request.GET.get('date_from', '')
     date_to = request.GET.get('date_to', '')
     section = request.GET.get('section', '')
     method = request.GET.get('method', '')
     insurance_id = request.GET.get('insurance', '')
-    practitioner_id = request.GET.get('practitioner', '')
+    cashier_id = request.GET.get('cashier', '')
     parsed_from, parsed_to = parse_report_date(date_from), parse_report_date(date_to)
     if parsed_from: payments = payments.filter(created_at__date__gte=parsed_from)
     if parsed_to: payments = payments.filter(created_at__date__lte=parsed_to)
@@ -90,14 +92,45 @@ def report(request):
     elif section == 'reception': payments = payments.exclude(admission__service__category__name__startswith='دندانپزشکی - ').filter(admission__beautyvisit__isnull=True)
     if method: payments = payments.filter(method=method)
     if insurance_id: payments = payments.filter(admission__insurance_id=insurance_id)
-    if practitioner_id: payments = payments.filter(admission__practitioner_id=practitioner_id)
+    if cashier_id: payments = payments.filter(cashier_id=cashier_id)
     total = payments.aggregate(value=Sum('amount'))['value'] or 0
-    return render(request, 'billing/report.html', {'payments': payments, 'total': total, 'count': payments.count(), 'sections': [('reception', 'پذیرش'), ('beauty', 'زیبایی'), ('dentistry', 'دندان‌پزشکی')], 'methods': Payment.Method.choices, 'insurances': InsuranceProvider.objects.filter(active=True), 'services': MedicalService.objects.filter(active=True), 'practitioners': Practitioner.objects.filter(active=True), 'selected': request.GET})
+    refunded = PaymentRefund.objects.filter(payment__in=payments).aggregate(value=Sum('amount'))['value'] or 0
+    return render(request, template, {'payments': payments, 'total': total, 'refunded_total': refunded, 'net_total': total - refunded, 'count': payments.count(), 'sections': [('reception', 'پذیرش'), ('beauty', 'زیبایی'), ('dentistry', 'دندان‌پزشکی')], 'methods': Payment.Method.choices, 'insurances': InsuranceProvider.objects.filter(active=True), 'users': User.objects.filter(userprofile__role__in=['cashier', 'reception']).order_by('username'), 'selected': request.GET})
+
+
+def refund_payment(request, payment_id):
+    if request.method != 'POST':
+        return redirect('billing_report')
+    payment = get_object_or_404(Payment, pk=payment_id)
+    if hasattr(payment, 'refund'):
+        return redirect('billing_report')
+    PaymentRefund.objects.create(payment=payment, amount=payment.amount, refunded_by=request.user if request.user.is_authenticated else None, note=request.POST.get('note', 'استرداد مبلغ بیمار'))
+    return redirect('billing_refund_report')
+
+
+def refund_report(request):
+    refunds = PaymentRefund.objects.select_related('payment__patient', 'payment__admission__service', 'refunded_by').order_by('-created_at')
+    total = refunds.aggregate(value=Sum('amount'))['value'] or 0
+    return render(request, 'billing/refund_report.html', {'refunds': refunds, 'total': total, 'count': refunds.count()})
+
+
+def report_export(request):
+    payments = Payment.objects.select_related('patient', 'admission__service', 'cashier').order_by('-created_at')
+    response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
+    response['Content-Disposition'] = 'attachment; filename="darmansoft-cashier-report.csv"'
+    writer = csv.writer(response); writer.writerow(['بیمار', 'خدمت', 'مبلغ', 'کاربر صندوق', 'تاریخ'])
+    for payment in payments: writer.writerow([str(payment.patient), str(payment.admission.service) if payment.admission else '', payment.amount, payment.cashier.username if payment.cashier else '', payment.created_at])
+    return response
+
+
+def report_print(request):
+    """Print-friendly version of the currently filtered cashier report."""
+    return report(request, 'billing/report_print.html')
 def payment_list(request):
     form = PaymentForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
         admission = form.admission
-        payment = Payment.objects.create(patient=admission.patient, admission=admission, amount=admission.patient_share, method=form.cleaned_data['method'], note=form.cleaned_data['note'])
+        payment = Payment.objects.create(patient=admission.patient, admission=admission, amount=admission.patient_share, method=form.cleaned_data['method'], note=form.cleaned_data['note'], cashier=request.user if request.user.is_authenticated else None)
         admission.status = Admission.Status.PAID
         admission.save(update_fields=['status'])
         return redirect('payment_receipt', payment_id=payment.id)

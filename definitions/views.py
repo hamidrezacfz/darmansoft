@@ -48,7 +48,8 @@ def setup(request, kind):
     options = {'categories': ('دسته‌های خدمت', CategoryForm, ServiceCategory), 'services': ('خدمات پزشکی', ServiceForm, MedicalService), 'insurances': ('بیمه‌ها', InsuranceForm, InsuranceProvider), 'tariffs': ('تعرفه‌های بیمه', TariffForm, InsuranceTariff), 'practitioner-groups': ('گروه‌های پزشکان و پرسنل', PractitionerGroupForm, PractitionerGroup)}
     if kind not in options: return redirect('definitions')
     title, form_class, model = options[kind]
-    form = form_class(request.POST or None)
+    edit_item = get_object_or_404(model, pk=request.GET.get('edit')) if request.GET.get('edit') else None
+    form = form_class(request.POST or None, instance=edit_item) if edit_item else form_class(request.POST or None)
     if request.method == 'POST' and form.is_valid():
         if kind == 'tariffs' and form.cleaned_data.get('apply_to_category'):
             category = form.cleaned_data['category']
@@ -65,14 +66,22 @@ def setup(request, kind):
             form.save()
         return redirect('definition_setup', kind=kind)
     items = model.objects.all()
-    if kind == 'services': items = items.select_related('category').order_by('category__panel', 'category__name', 'name')
+    if kind == 'services':
+        panel_filter = request.GET.get('panel', '')
+        category_filter = request.GET.get('category', '')
+        if panel_filter: items = items.filter(category__panel=panel_filter)
+        if category_filter.isdigit(): items = items.filter(category_id=category_filter)
+        items = items.select_related('category').order_by('category__panel', 'category__name', 'name')
     if kind == 'categories': items = items.order_by('panel', 'name')
     return render(request, 'definitions/setup.html', {
         'title': title,
         'form': form,
         'items': items,
         'kind': kind,
-        'is_tariff': kind == 'tariffs',
+        'is_tariff': kind == 'tariffs', 'edit_item': edit_item,
+        'panels': ServiceCategory.Panel.choices,
+        'service_categories': ServiceCategory.objects.all().order_by('panel', 'name'),
+        'selected_panel': request.GET.get('panel', ''), 'selected_category': request.GET.get('category', ''),
     })
 def index(request):
     form_type = request.POST.get('form_type')

@@ -10,14 +10,29 @@ class ServiceByCategorySelect(forms.Select):
             option['attrs']['data-category'] = str(instance.category_id)
         return option
 class CategoryForm(forms.ModelForm):
-    class Meta: model = ServiceCategory; fields = ['code', 'name', 'panel']
+    class Meta: model = ServiceCategory; fields = ['code', 'name', 'panel', 'active']
 class ServiceForm(forms.ModelForm):
     class Meta: model = MedicalService; fields = ['category','code','standard_code','name','technical_k','professional_k','active']
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['category'].queryset = ServiceCategory.objects.all().order_by('panel', 'name')
+        self.fields['category'].queryset = ServiceCategory.objects.filter(active=True).order_by('panel', 'name')
 class InsuranceForm(forms.ModelForm):
     class Meta: model = InsuranceProvider; fields = ['organization','name','active']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        coefficients = (self.instance.panel_k_coefficients if self.instance and self.instance.pk else {}) or {}
+        for panel, label in ServiceCategory.Panel.choices:
+            values = coefficients.get(panel, {})
+            self.fields[f'{panel}_technical_k'] = forms.DecimalField(label=f'{label} — K فنی', min_value=0, max_digits=14, decimal_places=4, required=False, initial=values.get('technical', 0))
+            self.fields[f'{panel}_professional_k'] = forms.DecimalField(label=f'{label} — K حرفه‌ای', min_value=0, max_digits=14, decimal_places=4, required=False, initial=values.get('professional', 0))
+
+    def save(self, commit=True):
+        insurance = super().save(commit=False)
+        insurance.panel_k_coefficients = {panel: {'technical': str(self.cleaned_data.get(f'{panel}_technical_k') or 0), 'professional': str(self.cleaned_data.get(f'{panel}_professional_k') or 0)} for panel, _ in ServiceCategory.Panel.choices}
+        if commit:
+            insurance.save()
+        return insurance
 class TariffForm(forms.ModelForm):
     category = forms.ModelChoiceField(label='دستهٔ خدمت', queryset=ServiceCategory.objects.all(), required=False, empty_label='همهٔ دسته‌ها / انتخاب نشده')
     apply_to_category = forms.BooleanField(label='اعمال این فرمول برای همهٔ خدمات دسته', required=False)
@@ -50,7 +65,7 @@ class TariffForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['category'].queryset = ServiceCategory.objects.all().order_by('panel', 'name')
+        self.fields['category'].queryset = ServiceCategory.objects.filter(active=True).order_by('panel', 'name')
         self.fields['service'].queryset = MedicalService.objects.filter(active=True).select_related('category').order_by('category__name', 'name')
         self.fields['service'].required = False
         self.fields['service'].widget = ServiceByCategorySelect()
@@ -69,6 +84,7 @@ class TariffForm(forms.ModelForm):
 class PractitionerGroupForm(forms.ModelForm):
     class Meta: model = PractitionerGroup; fields = ['name','active']
 class PractitionerForm(forms.ModelForm):
-    class Meta: model = Practitioner; fields = ['name','medical_system_code','group','role','share_percent','active']
+    active_panels = forms.MultipleChoiceField(label='بخش‌های فعال', choices=ServiceCategory.Panel.choices, required=False, widget=forms.CheckboxSelectMultiple)
+    class Meta: model = Practitioner; fields = ['name','medical_system_code','group','role','share_percent','active','active_panels']
     def clean_medical_system_code(self):
         return self.cleaned_data['medical_system_code'].strip() or None

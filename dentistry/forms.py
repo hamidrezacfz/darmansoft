@@ -1,4 +1,5 @@
 from django import forms
+from django.db.models import Q
 from definitions.models import InsuranceProvider, InsuranceTariff, MedicalService, Practitioner, ServiceCategory
 
 
@@ -34,13 +35,18 @@ class DentalTariffForm(forms.ModelForm):
         super().__init__(*args, **kwargs); self.fields['service'].queryset = services if services is not None else MedicalService.objects.none()
 
 
+class DentalServiceChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, service):
+        return f'{service.code or "بدون کد"} — {service.category.name} — {service.name}'
+
+
 class DentalAdmissionForm(forms.Form):
     national_id = forms.CharField(label='کد ملی', max_length=10)
     first_name = forms.CharField(label='نام', max_length=50)
     last_name = forms.CharField(label='نام خانوادگی', max_length=70)
     mobile = forms.CharField(label='شماره همراه', max_length=15, required=False)
-    service = forms.ModelChoiceField(label='خدمت دندانپزشکی', queryset=MedicalService.objects.none())
-    practitioner = forms.ModelChoiceField(label='دندان‌پزشک / انجام‌دهنده', queryset=Practitioner.objects.filter(active=True), required=False)
+    service = DentalServiceChoiceField(label='کد یا نام خدمت دندانپزشکی', queryset=MedicalService.objects.none())
+    practitioner = forms.ModelChoiceField(label='دندان‌پزشک / انجام‌دهنده', queryset=Practitioner.objects.filter(active=True).filter(Q(active_panels__contains=['dentistry']) | Q(active_panels=[])), required=False)
     tooth_numbers = forms.CharField(required=False, widget=forms.HiddenInput())
     note = forms.CharField(label='توضیحات', required=False, widget=forms.Textarea(attrs={'rows': 2}))
     def __init__(self, *args, services=None, **kwargs):

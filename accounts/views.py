@@ -22,11 +22,19 @@ def logout_view(request):
 
 @role_required(UserProfile.Role.ADMIN)
 def index(request):
-    form=UserForm(request.POST or None)
+    edit_id=request.GET.get('edit')
+    profile=UserProfile.objects.select_related('user').filter(pk=edit_id).first() if edit_id else None
+    form=UserForm(request.POST or None,profile=profile)
+    form.profile=profile
     if request.method=='POST' and form.is_valid():
-        user=User.objects.create_user(username=form.cleaned_data['username'],password=form.cleaned_data['password'])
-        UserProfile.objects.create(user=user,role=form.cleaned_data['role'])
+        if profile:
+            user=profile.user; user.username=form.cleaned_data['username']
+            if form.cleaned_data['password']: user.set_password(form.cleaned_data['password'])
+            user.save(); profile.role=form.cleaned_data['role']; profile.active_panels=form.cleaned_data['active_panels']; profile.permissions=form.cleaned_data['permissions']; profile.save()
+        else:
+            user=User.objects.create_user(username=form.cleaned_data['username'],password=form.cleaned_data['password'])
+            UserProfile.objects.create(user=user,role=form.cleaned_data['role'],active_panels=form.cleaned_data['active_panels'],permissions=form.cleaned_data['permissions'])
         return redirect('users')
-    return render(request,'accounts/index.html',{'form':form,'users':UserProfile.objects.select_related('user')})
+    return render(request,'accounts/index.html',{'form':form,'users':UserProfile.objects.select_related('user'),'edit_profile':profile})
 
 # Create your views here.

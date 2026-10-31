@@ -7,10 +7,14 @@ class ServiceCategory(models.Model):
         DENTISTRY = 'dentistry', 'دندان‌پزشکی'
         IMAGING = 'imaging', 'تصویربرداری'
         AESTHETICS = 'aesthetics', 'زیبایی و سلامت'
+        LABORATORY = 'laboratory', 'آزمایشگاه'
+        PHYSIOTHERAPY = 'physiotherapy', 'فیزیوتراپی'
+        PHARMACY = 'pharmacy', 'داروخانه'
 
     code = models.CharField('کد دسته', max_length=20, unique=True)
     name = models.CharField('نام دسته', max_length=80, unique=True)
     panel = models.CharField('پنل مربوطه', max_length=20, choices=Panel.choices, default=Panel.GENERAL)
+    active = models.BooleanField('فعال', default=True)
     def __str__(self): return self.name
 
 class PractitionerGroup(models.Model):
@@ -26,6 +30,7 @@ class Practitioner(models.Model):
     role = models.CharField('سمت / تخصص', max_length=100, blank=True)
     share_percent = models.DecimalField('درصد سهم از عملکرد', max_digits=5, decimal_places=2, default=0)
     active = models.BooleanField('فعال', default=True)
+    active_panels = models.JSONField('بخش‌های فعال', default=list, blank=True)
     def __str__(self): return f'{self.name} — {self.role}' if self.role else self.name
 
 class MedicalService(models.Model):
@@ -43,6 +48,7 @@ class InsuranceProvider(models.Model):
     organization = models.CharField('سازمان بیمه‌گر', max_length=100)
     name = models.CharField('نام بیمه', max_length=100)
     active = models.BooleanField('فعال', default=True)
+    panel_k_coefficients = models.JSONField('ضرایب K پنل‌ها', default=dict, blank=True)
     class Meta: unique_together = [('organization', 'name')]
     def __str__(self): return f'{self.organization} — {self.name}'
 
