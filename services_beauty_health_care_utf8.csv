@@ -1,0 +1,100 @@
+﻿کد دسته,کد داخلی,کد استاندارد,نام خدمت
+BEAUTY-LASER,BL-001,,لیزر موهای زائد صورت
+BEAUTY-LASER,BL-002,,لیزر موهای زائد بدن
+BEAUTY-LASER,BL-003,,لیزر موهای زائد آقایان
+BEAUTY-LASER,BL-004,,لیزر بیکینی
+BEAUTY-LASER,BL-005,,لیزر لک و تیرگی
+BEAUTY-LASER,BL-006,,لیزر جای جوش و اسکار
+BEAUTY-LASER,BL-007,,لیزر جوان‌سازی پوست
+BEAUTY-LASER,BL-008,,لیزر فرکشنال
+BEAUTY-LASER,BL-009,,لیزر CO2 فرکشنال
+BEAUTY-LASER,BL-010,,لیزر تاتو
+BEAUTY-LASER,BL-011,,هایفو صورت
+BEAUTY-LASER,BL-012,,هایفو غبغب
+BEAUTY-LASER,BL-013,,هایفو بدن
+BEAUTY-LASER,BL-014,,جوان‌سازی با RF
+BEAUTY-LASER,BL-015,,رفع لک با IPL
+BEAUTY-INJECTION,BI-001,,تزریق بوتاکس پیشانی
+BEAUTY-INJECTION,BI-002,,تزریق بوتاکس خط اخم
+BEAUTY-INJECTION,BI-003,,تزریق بوتاکس دور چشم
+BEAUTY-INJECTION,BI-004,,تزریق بوتاکس گردن
+BEAUTY-INJECTION,BI-005,,تزریق بوتاکس درمان تعریق
+BEAUTY-INJECTION,BI-006,,تزریق فیلر لب
+BEAUTY-INJECTION,BI-007,,تزریق فیلر گونه
+BEAUTY-INJECTION,BI-008,,تزریق فیلر چانه
+BEAUTY-INJECTION,BI-009,,تزریق فیلر خط خنده
+BEAUTY-INJECTION,BI-010,,تزریق فیلر زیر چشم
+BEAUTY-INJECTION,BI-011,,تزریق فیلر بینی
+BEAUTY-INJECTION,BI-012,,تزریق فیلر فک
+BEAUTY-INJECTION,BI-013,,تزریق فیلر شقیقه
+BEAUTY-INJECTION,BI-014,,مزوتراپی پوست
+BEAUTY-INJECTION,BI-015,,مزوتراپی مو
+BEAUTY-INJECTION,BI-016,,تزریق PRP صورت
+BEAUTY-INJECTION,BI-017,,تزریق PRP مو
+BEAUTY-SKIN,BS-001,,فیشیال صورت
+BEAUTY-SKIN,BS-002,,پاک‌سازی تخصصی پوست
+BEAUTY-SKIN,BS-003,,هیدرودرم
+BEAUTY-SKIN,BS-004,,میکرودرم ابریژن
+BEAUTY-SKIN,BS-005,,درماپلنینگ
+BEAUTY-SKIN,BS-006,,پیلینگ سطحی
+BEAUTY-SKIN,BS-007,,پیلینگ ضدجوش
+BEAUTY-SKIN,BS-008,,پیلینگ لک و ملاسما
+BEAUTY-SKIN,BS-009,,میکرونیدلینگ صورت
+BEAUTY-SKIN,BS-010,,میکرونیدلینگ جای جوش
+BEAUTY-SKIN,BS-011,,میکرونیدلینگ پوست سر
+BEAUTY-SKIN,BS-012,,درمان جوش و آکنه
+BEAUTY-SKIN,BS-013,,درمان لک صورت
+BEAUTY-SKIN,BS-014,,آبرسانی پوست
+BEAUTY-SKIN,BS-015,,LED تراپی
+BEAUTY-HAIR,BH-001,,مشاوره و بررسی ریزش مو
+BEAUTY-HAIR,BH-002,,کربوکسی‌تراپی مو
+BEAUTY-HAIR,BH-003,,تقویت مو با ویتامین‌ها
+BEAUTY-HAIR,BH-004,,پاک‌سازی پوست سر
+BEAUTY-HAIR,BH-005,,احیای مو
+BEAUTY-HAIR,BH-006,,کراتینه مو
+BEAUTY-HAIR,BH-007,,پروتئین‌تراپی مو
+BEAUTY-HAIR,BH-008,,بوتاکس مو
+BEAUTY-HAIR,BH-009,,کاشت مو
+BEAUTY-HAIR,BH-010,,کاشت ابرو
+BEAUTY-HAIR,BH-011,,ترمیم مو
+BEAUTY-BROW-LASH,BB-001,,اصلاح ابرو
+BEAUTY-BROW-LASH,BB-002,,میکروبلیدینگ ابرو
+BEAUTY-BROW-LASH,BB-003,,میکروشیدینگ ابرو
+BEAUTY-BROW-LASH,BB-004,,فیبروز ابرو
+BEAUTY-BROW-LASH,BB-005,,لمینت ابرو
+BEAUTY-BROW-LASH,BB-006,,لیفت ابرو
+BEAUTY-BROW-LASH,BB-007,,لیفت مژه
+BEAUTY-BROW-LASH,BB-008,,لمینت مژه
+BEAUTY-BROW-LASH,BB-009,,اکستنشن مژه کلاسیک
+BEAUTY-BROW-LASH,BB-010,,اکستنشن مژه والیوم
+BEAUTY-NAIL,BN-001,,مانیکور ساده
+BEAUTY-NAIL,BN-002,,مانیکور روسی
+BEAUTY-NAIL,BN-003,,پدیکور ساده
+BEAUTY-NAIL,BN-004,,پدیکور تخصصی
+BEAUTY-NAIL,BN-005,,ژل‌پولیش ناخن
+BEAUTY-NAIL,BN-006,,کاشت ناخن با ژل
+BEAUTY-NAIL,BN-007,,کاشت ناخن با پودر
+BEAUTY-NAIL,BN-008,,کاشت ناخن با پلی‌ژل
+BEAUTY-NAIL,BN-009,,ترمیم کاشت ناخن
+BEAUTY-NAIL,BN-010,,لمینت ناخن
+BEAUTY-NAIL,BN-011,,طراحی ناخن
+BEAUTY-NAIL,BN-012,,برداشتن کاشت ناخن
+BEAUTY-BODY,BY-001,,ماساژ ریلکسی
+BEAUTY-BODY,BY-002,,ماساژ درمانی
+BEAUTY-BODY,BY-003,,فرم‌دهی شکم
+BEAUTY-BODY,BY-004,,فرم‌دهی پهلو
+BEAUTY-BODY,BY-005,,رفع سلولیت
+BEAUTY-BODY,BY-006,,بادی‌اسکراب
+BEAUTY-BODY,BY-007,,بادی‌پولیش
+BEAUTY-BODY,BY-008,,وکس صورت
+BEAUTY-BODY,BY-009,,وکس بدن
+BEAUTY-BODY,BY-010,,اپیلاسیون کامل
+BEAUTY-CONSULT,BC-001,,مشاوره پوست و مو
+BEAUTY-CONSULT,BC-002,,مشاوره زیبایی
+BEAUTY-CONSULT,BC-003,,آنالیز پوست
+BEAUTY-CONSULT,BC-004,,آنالیز مو
+BEAUTY-CONSULT,BC-005,,برنامه مراقبت خانگی پوست
+BEAUTY-CONSULT,BC-006,,برنامه مراقبت خانگی مو
+BEAUTY-CONSULT,BC-007,,مشاوره تغذیه و کاهش وزن
+BEAUTY-CONSULT,BC-008,,مشاوره قبل از تزریق
+BEAUTY-CONSULT,BC-009,,مشاوره بعد از تزریق

@@ -149,4 +149,37 @@ def import_template(request, kind):
     response['Content-Disposition'] = f'attachment; filename="darman-soft-{kind}-template.xlsx"'
     return response
 
+def export_services(request):
+    def column_name(index):
+        name = ''
+        while index:
+            index, remainder = divmod(index - 1, 26)
+            name = chr(65 + remainder) + name
+        return name
+    services = MedicalService.objects.select_related('category').order_by('category__name', 'code', 'name')
+    category_id = request.GET.get('category', '').strip()
+    panel = request.GET.get('panel', '').strip()
+    if category_id:
+        services = services.filter(category_id=category_id)
+    if panel:
+        services = services.filter(category__panel=panel)
+    rows = [['کد دسته', 'نام دسته', 'پنل', 'کد داخلی', 'کد استاندارد', 'نام خدمت', 'وضعیت']]
+    for service in services:
+        rows.append([service.category.code, service.category.name, service.category.get_panel_display(), service.code or '', service.standard_code or '', service.name, 'فعال' if service.active else 'غیرفعال'])
+    sheet_rows = []
+    for row_index, row in enumerate(rows, 1):
+        cells = ''.join(f'<c r="{column_name(index)}{row_index}" t="inlineStr"><is><t>{escape(str(value))}</t></is></c>' for index, value in enumerate(row, 1))
+        sheet_rows.append(f'<row r="{row_index}">{cells}</row>')
+    sheet = f'<?xml version="1.0" encoding="UTF-8"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>{"".join(sheet_rows)}</sheetData></worksheet>'
+    output = io.BytesIO()
+    with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as book:
+        book.writestr('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>')
+        book.writestr('_rels/.rels', '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>')
+        book.writestr('xl/workbook.xml', '<?xml version="1.0" encoding="UTF-8"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="خدمات پزشکی" sheetId="1" r:id="rId1"/></sheets></workbook>')
+        book.writestr('xl/_rels/workbook.xml.rels', '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>')
+        book.writestr('xl/worksheets/sheet1.xml', sheet)
+    response = HttpResponse(output.getvalue(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename="darman-soft-services.xlsx"'
+    return response
+
 # Create your views here.
