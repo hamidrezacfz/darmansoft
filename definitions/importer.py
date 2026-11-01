@@ -131,6 +131,9 @@ def _parse_services(upload, imaging=False):
             name = _value(row, headers, 'نام خدمت', 'نام')
             code = _value(row, headers, 'کد داخلی', 'کد')
             standard = _value(row, headers, 'کد استاندارد')
+            if len(name) > 120: raise ValueError('نام خدمت نباید بیشتر از ۱۲۰ کاراکتر باشد.')
+            if len(code) > 20: raise ValueError('کد داخلی نباید بیشتر از ۲۰ کاراکتر باشد.')
+            if len(standard) > 30: raise ValueError('کد استاندارد نباید بیشتر از ۳۰ کاراکتر باشد.')
             category = ServiceCategory.objects.filter(code=category_code).first()
             if not category or not name:
                 raise ValueError('کد دسته معتبر و نام خدمت الزامی است.')

@@ -6,6 +6,7 @@ from django.contrib import messages
 from django.shortcuts import get_object_or_404, render
 from django.shortcuts import redirect
 from django.db import transaction
+from django.db import DataError
 from django.db.models.deletion import ProtectedError
 from .models import ServiceCategory, MedicalService, InsuranceProvider, InsuranceTariff, Practitioner, PractitionerGroup
 from .forms import CategoryForm, ServiceForm, InsuranceForm, TariffForm, PractitionerForm, PractitionerGroupForm
@@ -110,7 +111,7 @@ def import_file(request):
                     for error in errors: messages.error(request, error)
                 else:
                     messages.success(request, f'{created} مورد جدید ثبت و {updated} مورد به‌روزرسانی شد.')
-            except ValueError as exc: messages.error(request, str(exc))
+            except (ValueError, DataError) as exc: messages.error(request, 'ورود فایل انجام نشد: یکی از مقادیر ستون‌ها بیش از طول مجاز است. نام خدمت حداکثر ۱۲۰ کاراکتر، کد داخلی ۲۰ و کد استاندارد ۳۰ کاراکتر باشد.')
         return redirect('definition_import')
     return render(request, 'definitions/import.html')
 
